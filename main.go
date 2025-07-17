@@ -52,8 +52,14 @@ func run(_ context.Context) error {
 			{
 				Name:  "gomod",
 				Usage: "List archived go modules",
-				Action: func(_ *cli.Context) error {
-					return cmd.ListArchivedGoModules()
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:  "indirect",
+						Usage: "Include indirect go modules",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					return cmd.ListArchivedGoModules(c.Bool("indirect"))
 				},
 			},
 		},

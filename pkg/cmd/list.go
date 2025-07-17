@@ -13,7 +13,8 @@ import (
 	"golang.org/x/mod/modfile"
 )
 
-func ListArchivedGoModules() error {
+// ListArchivedGoModules lists archived Go modules, optionally including indirect ones.
+func ListArchivedGoModules(showIndirect bool) error {
 	// Find all go.mod files recursively
 	var goModFiles []string
 
@@ -123,7 +124,7 @@ func ListArchivedGoModules() error {
 	}
 
 	printArchived := func(goModPath, repo, pushedAt, depType string) {
-		if depType == "indirect" {
+		if depType == "indirect" && showIndirect {
 			fmt.Printf("%s: https://github.com/%s (last push: %s) [indirect]\n", goModPath, repo, pushedAt)
 		} else {
 			fmt.Printf("%s: https://github.com/%s (last push: %s)\n", goModPath, repo, pushedAt)
