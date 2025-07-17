@@ -136,7 +136,9 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 		}
 
 		countMu.Lock()
+
 		archivedCount++
+
 		countMu.Unlock()
 	}
 
