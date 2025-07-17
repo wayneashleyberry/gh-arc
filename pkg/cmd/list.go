@@ -13,6 +13,8 @@ import (
 	"golang.org/x/mod/modfile"
 )
 
+const indirectDepType = "indirect"
+
 // ListArchivedGoModules lists archived Go modules, optionally including indirect ones. Returns the count of archived repos found.
 func ListArchivedGoModules(checkIndirect bool) (int, error) {
 	// Find all go.mod files recursively
@@ -70,7 +72,7 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 
 					depType := "direct"
 					if req.Indirect {
-						depType = "indirect"
+						depType = indirectDepType
 					}
 
 					repos[repo] = append(repos[repo], repoInfo{depType, goModPath})
@@ -129,7 +131,7 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 	)
 
 	printArchived := func(goModPath, repo, pushedAt, depType string) {
-		if depType == "indirect" {
+		if depType == indirectDepType {
 			fmt.Printf("%s: https://github.com/%s (last push: %s) [indirect]\n", goModPath, repo, pushedAt)
 		} else {
 			fmt.Printf("%s: https://github.com/%s (last push: %s)\n", goModPath, repo, pushedAt)
@@ -170,12 +172,14 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 				result := cached.(repoResult)
 				if result.Archived {
 					for _, info := range infos {
-						if !checkIndirect && info.depType == "indirect" {
+						if !checkIndirect && info.depType == indirectDepType {
 							continue
 						}
+
 						printArchived(info.goModPath, repo, result.PushedAt, info.depType)
 					}
 				}
+
 				return
 			}
 
@@ -191,6 +195,7 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 			err := client.Get(path, &result)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "error fetching repo %s: %v\n", repo, err)
+
 				return
 			}
 
@@ -199,9 +204,10 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 
 			if result.Archived {
 				for _, info := range infos {
-					if !checkIndirect && info.depType == "indirect" {
+					if !checkIndirect && info.depType == indirectDepType {
 						continue
 					}
+
 					printArchived(info.goModPath, repo, result.PushedAt, info.depType)
 				}
 			}
