@@ -33,3 +33,25 @@ gh extension upgrade --all
 ```sh
 gh arc gomod
 ```
+
+#### Help
+
+```sh
+gh arc help
+```
+
+```
+NAME:
+   arc - List archived dependencies
+
+USAGE:
+   arc [global options] command [command options]
+
+COMMANDS:
+   gomod    List archived go modules
+   help, h  Shows a list of commands or help for one command
+
+GLOBAL OPTIONS:
+   --debug     Print debug logs (default: false)
+   --help, -h  show help
+```
