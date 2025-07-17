@@ -6,8 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/cli/go-gh/v2/pkg/api"
+	"github.com/patrickmn/go-cache"
 	"golang.org/x/mod/modfile"
 )
 
@@ -97,7 +99,23 @@ func ListArchivedGoModules() error {
 		return fmt.Errorf("failed to create GitHub API client: %w", err)
 	}
 
+	// Set up cache with default expiration 1 hour, cleanup interval 2 hours
+	c := cache.New(1*time.Hour, 2*time.Hour)
+
 	var wg sync.WaitGroup
+
+	type repoResult struct {
+		Archived bool   `json:"archived"`
+		PushedAt string `json:"pushed_at"`
+	}
+
+	printArchived := func(goModPath, repo, pushedAt, depType string) {
+		if depType == "indirect" {
+			fmt.Printf("%s: github.com/%s (last push: %s) [indirect]\n", goModPath, repo, pushedAt)
+		} else {
+			fmt.Printf("%s: github.com/%s (last push: %s)\n", goModPath, repo, pushedAt)
+		}
+	}
 
 	for repo, infos := range repos {
 		wg.Add(1)
@@ -105,15 +123,23 @@ func ListArchivedGoModules() error {
 		go func(repo string, infos []repoInfo) {
 			defer wg.Done()
 
+			// Check cache first
+			if cached, found := c.Get(repo); found {
+				result := cached.(repoResult)
+				if result.Archived {
+					for _, info := range infos {
+						printArchived(info.goModPath, repo, result.PushedAt, info.depType)
+					}
+				}
+				return
+			}
+
 			ownerRepo := strings.Split(repo, "/")
 			if len(ownerRepo) != 2 {
 				return
 			}
 
-			var result struct {
-				Archived bool   `json:"archived"`
-				PushedAt string `json:"pushed_at"`
-			}
+			var result repoResult
 
 			path := fmt.Sprintf("repos/%s/%s", ownerRepo[0], ownerRepo[1])
 
@@ -123,9 +149,12 @@ func ListArchivedGoModules() error {
 				return
 			}
 
+			// Store in cache
+			c.Set(repo, result, cache.DefaultExpiration)
+
 			if result.Archived {
 				for _, info := range infos {
-					fmt.Printf("%s: github.com/%s (last push: %s) [%s]\n", info.goModPath, repo, result.PushedAt, info.depType)
+					printArchived(info.goModPath, repo, result.PushedAt, info.depType)
 				}
 			}
 		}(repo, infos)
