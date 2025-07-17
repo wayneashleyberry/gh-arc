@@ -129,16 +129,14 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 	)
 
 	printArchived := func(goModPath, repo, pushedAt, depType string) {
-		if depType == "indirect" && checkIndirect {
+		if depType == "indirect" {
 			fmt.Printf("%s: https://github.com/%s (last push: %s) [indirect]\n", goModPath, repo, pushedAt)
 		} else {
 			fmt.Printf("%s: https://github.com/%s (last push: %s)\n", goModPath, repo, pushedAt)
 		}
 
 		countMu.Lock()
-
 		archivedCount++
-
 		countMu.Unlock()
 	}
 
