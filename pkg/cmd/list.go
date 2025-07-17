@@ -15,8 +15,7 @@ import (
 
 const indirectDepType = "indirect"
 
-// ListArchivedGoModules lists archived Go modules, optionally including indirect ones. Returns the count of archived repos found.
-func ListArchivedGoModules(checkIndirect bool) (int, error) {
+func findGoModFiles() ([]string, error) {
 	// Find all go.mod files recursively
 	var goModFiles []string
 
@@ -32,13 +31,17 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 		return nil
 	})
 	if err != nil {
-		return 0, fmt.Errorf("error walking directories: %w", err)
+		return goModFiles, fmt.Errorf("error walking directories: %w", err)
 	}
 
-	if len(goModFiles) == 0 {
-		fmt.Println("No go.mod files found.")
+	return goModFiles, nil
+}
 
-		return 0, nil
+// ListArchivedGoModules lists archived Go modules, optionally including indirect ones. Returns the count of archived repos found.
+func ListArchivedGoModules(checkIndirect bool) (int, error) {
+	goModFiles, err := findGoModFiles()
+	if err != nil {
+		return 0, fmt.Errorf("failed to find go.mod files: %w", err)
 	}
 
 	// repoKey: github.com/owner/repo, value: slice of info structs
