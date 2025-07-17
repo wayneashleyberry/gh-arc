@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/cli/go-gh/v2/pkg/api"
 	"golang.org/x/mod/modfile"
@@ -56,43 +57,39 @@ func ListArchivedGoModules() error {
 		return fmt.Errorf("failed to create GitHub API client: %w", err)
 	}
 
-	archived := []string{}
+	var wg sync.WaitGroup
 
 	for repo := range repos {
-		ownerRepo := strings.Split(repo, "/")
-		if len(ownerRepo) != 2 {
-			continue
-		}
+		wg.Add(1)
 
-		var result struct {
-			Archived bool `json:"archived"`
-		}
+		go func(repo string) {
+			defer wg.Done()
 
-		path := fmt.Sprintf("repos/%s/%s", ownerRepo[0], ownerRepo[1])
+			ownerRepo := strings.Split(repo, "/")
+			if len(ownerRepo) != 2 {
+				return
+			}
 
-		err := client.Get(path, &result)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error fetching repo %s: %v\n", repo, err)
+			var result struct {
+				Archived bool   `json:"archived"`
+				PushedAt string `json:"pushed_at"`
+			}
 
-			continue
-		}
+			path := fmt.Sprintf("repos/%s/%s", ownerRepo[0], ownerRepo[1])
 
-		if result.Archived {
-			archived = append(archived, "github.com/"+repo)
-		}
+			err := client.Get(path, &result)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error fetching repo %s: %v\n", repo, err)
+				return
+			}
+
+			if result.Archived {
+				fmt.Printf("github.com/%s (last push: %s)\n", repo, result.PushedAt)
+			}
+		}(repo)
 	}
 
-	if len(archived) == 0 {
-		fmt.Println("No archived GitHub repositories found in go.mod")
-
-		return nil
-	}
-
-	fmt.Println("Archived GitHub repositories found in go.mod:")
-
-	for _, repo := range archived {
-		fmt.Println(repo)
-	}
+	wg.Wait()
 
 	return nil
 }

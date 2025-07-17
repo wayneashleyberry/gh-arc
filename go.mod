@@ -3,6 +3,7 @@ module github.com/wayneashleyberry/gh-arc
 go 1.24.5
 
 require (
+	github.com/awslabs/aws-lambda-go-api-proxy v0.16.2
 	github.com/cli/go-gh/v2 v2.12.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/urfave/cli/v2 v2.27.7
@@ -10,6 +11,7 @@ require (
 )
 
 require (
+	github.com/aws/aws-lambda-go v1.41.0 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/cli/safeexec v1.0.1 // indirect
 	github.com/cli/shurcooL-graphql v0.0.4 // indirect
