@@ -24,14 +24,18 @@ func ListArchivedGoModules() error {
 		return fmt.Errorf("failed to parse go.mod: %w", err)
 	}
 
-	repos := map[string]struct{}{}
+	repos := map[string]string{} // repo -> "direct" or "indirect"
 
 	for _, req := range mf.Require {
 		if strings.HasPrefix(req.Mod.Path, "github.com/") {
 			parts := strings.Split(req.Mod.Path, "/")
 			if len(parts) >= 3 {
 				repo := fmt.Sprintf("%s/%s", parts[1], parts[2])
-				repos[repo] = struct{}{}
+				depType := "direct"
+				if req.Indirect {
+					depType = "indirect"
+				}
+				repos[repo] = depType
 			}
 		}
 	}
@@ -41,7 +45,10 @@ func ListArchivedGoModules() error {
 			parts := strings.Split(rep.New.Path, "/")
 			if len(parts) >= 3 {
 				repo := fmt.Sprintf("%s/%s", parts[1], parts[2])
-				repos[repo] = struct{}{}
+				// If replaced repo is already in repos, keep its type (direct/indirect)
+				if _, ok := repos[repo]; !ok {
+					repos[repo] = "direct" // default to direct for replace
+				}
 			}
 		}
 	}
@@ -59,10 +66,10 @@ func ListArchivedGoModules() error {
 
 	var wg sync.WaitGroup
 
-	for repo := range repos {
+	for repo, depType := range repos {
 		wg.Add(1)
 
-		go func(repo string) {
+		go func(repo, depType string) {
 			defer wg.Done()
 
 			ownerRepo := strings.Split(repo, "/")
@@ -85,9 +92,9 @@ func ListArchivedGoModules() error {
 			}
 
 			if result.Archived {
-				fmt.Printf("github.com/%s (last push: %s)\n", repo, result.PushedAt)
+				fmt.Printf("github.com/%s (last push: %s) [%s]\n", repo, result.PushedAt, depType)
 			}
-		}(repo)
+		}(repo, depType)
 	}
 
 	wg.Wait()
