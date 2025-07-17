@@ -80,6 +80,7 @@ func ListArchivedGoModules() error {
 			err := client.Get(path, &result)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "error fetching repo %s: %v\n", repo, err)
+
 				return
 			}
 
