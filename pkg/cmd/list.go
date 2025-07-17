@@ -170,10 +170,12 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 				result := cached.(repoResult)
 				if result.Archived {
 					for _, info := range infos {
+						if !checkIndirect && info.depType == "indirect" {
+							continue
+						}
 						printArchived(info.goModPath, repo, result.PushedAt, info.depType)
 					}
 				}
-
 				return
 			}
 
@@ -189,7 +191,6 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 			err := client.Get(path, &result)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "error fetching repo %s: %v\n", repo, err)
-
 				return
 			}
 
@@ -198,6 +199,9 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 
 			if result.Archived {
 				for _, info := range infos {
+					if !checkIndirect && info.depType == "indirect" {
+						continue
+					}
 					printArchived(info.goModPath, repo, result.PushedAt, info.depType)
 				}
 			}
