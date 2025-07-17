@@ -59,7 +59,16 @@ func run(_ context.Context) error {
 					},
 				},
 				Action: func(c *cli.Context) error {
-					return cmd.ListArchivedGoModules(c.Bool("indirect"))
+					count, err := cmd.ListArchivedGoModules(c.Bool("indirect"))
+					if err != nil {
+						return err
+					}
+
+					if count > 0 {
+						return cli.Exit("", 1)
+					}
+
+					return nil
 				},
 			},
 		},

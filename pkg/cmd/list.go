@@ -13,8 +13,8 @@ import (
 	"golang.org/x/mod/modfile"
 )
 
-// ListArchivedGoModules lists archived Go modules, optionally including indirect ones.
-func ListArchivedGoModules(checkIndirect bool) error {
+// ListArchivedGoModules lists archived Go modules, optionally including indirect ones. Returns the count of archived repos found.
+func ListArchivedGoModules(checkIndirect bool) (int, error) {
 	// Find all go.mod files recursively
 	var goModFiles []string
 
@@ -30,13 +30,13 @@ func ListArchivedGoModules(checkIndirect bool) error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("error walking directories: %w", err)
+		return 0, fmt.Errorf("error walking directories: %w", err)
 	}
 
 	if len(goModFiles) == 0 {
 		fmt.Println("No go.mod files found.")
 
-		return nil
+		return 0, nil
 	}
 
 	// repoKey: github.com/owner/repo, value: slice of info structs
@@ -105,12 +105,12 @@ func ListArchivedGoModules(checkIndirect bool) error {
 	if len(repos) == 0 {
 		fmt.Println("No github.com modules found in any go.mod file.")
 
-		return nil
+		return 0, nil
 	}
 
 	client, err := api.DefaultRESTClient()
 	if err != nil {
-		return fmt.Errorf("failed to create GitHub API client: %w", err)
+		return 0, fmt.Errorf("failed to create GitHub API client: %w", err)
 	}
 
 	// Set up cache with default expiration 1 hour, cleanup interval 2 hours
@@ -123,12 +123,23 @@ func ListArchivedGoModules(checkIndirect bool) error {
 		PushedAt string `json:"pushed_at"`
 	}
 
+	var (
+		archivedCount int64
+		countMu       sync.Mutex
+	)
+
 	printArchived := func(goModPath, repo, pushedAt, depType string) {
 		if depType == "indirect" && checkIndirect {
 			fmt.Printf("%s: https://github.com/%s (last push: %s) [indirect]\n", goModPath, repo, pushedAt)
 		} else {
 			fmt.Printf("%s: https://github.com/%s (last push: %s)\n", goModPath, repo, pushedAt)
 		}
+
+		countMu.Lock()
+
+		archivedCount++
+
+		countMu.Unlock()
 	}
 
 	for repo, infos := range repos {
@@ -195,5 +206,5 @@ func ListArchivedGoModules(checkIndirect bool) error {
 
 	wg.Wait()
 
-	return nil
+	return int(archivedCount), nil
 }
