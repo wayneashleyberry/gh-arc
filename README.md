@@ -2,6 +2,10 @@
 
 > ✨ A GitHub (gh) CLI extension to find archived dependencies.
 
+[![Release](https://github.com/wayneashleyberry/gh-arc/actions/workflows/release.yaml/badge.svg)](https://github.com/wayneashleyberry/gh-arc/actions/workflows/release.yaml)
+[![Lint](https://github.com/wayneashleyberry/gh-arc/actions/workflows/lint.yaml/badge.svg)](https://github.com/wayneashleyberry/gh-arc/actions/workflows/lint.yaml)
+[![Run](https://github.com/wayneashleyberry/gh-arc/actions/workflows/run.yaml/badge.svg)](https://github.com/wayneashleyberry/gh-arc/actions/workflows/run.yaml)
+
 ### Why?
 
 You have dependencies, and sometimes those dependencies are no longer maintained—their repositories become archived on GitHub. Archived repositories are read-only, will not receive updates, bug fixes, or security patches, and may eventually disappear. Knowing which of your dependencies are archived helps you:
