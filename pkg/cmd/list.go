@@ -14,7 +14,7 @@ import (
 )
 
 // ListArchivedGoModules lists archived Go modules, optionally including indirect ones.
-func ListArchivedGoModules(showIndirect bool) error {
+func ListArchivedGoModules(checkIndirect bool) error {
 	// Find all go.mod files recursively
 	var goModFiles []string
 
@@ -124,7 +124,7 @@ func ListArchivedGoModules(showIndirect bool) error {
 	}
 
 	printArchived := func(goModPath, repo, pushedAt, depType string) {
-		if depType == "indirect" && showIndirect {
+		if depType == "indirect" && checkIndirect {
 			fmt.Printf("%s: https://github.com/%s (last push: %s) [indirect]\n", goModPath, repo, pushedAt)
 		} else {
 			fmt.Printf("%s: https://github.com/%s (last push: %s)\n", goModPath, repo, pushedAt)
@@ -132,6 +132,23 @@ func ListArchivedGoModules(showIndirect bool) error {
 	}
 
 	for repo, infos := range repos {
+		// If checkIndirect is false and all infos are indirect, skip this repo entirely
+		if !checkIndirect {
+			onlyIndirect := true
+
+			for _, info := range infos {
+				if info.depType == "direct" {
+					onlyIndirect = false
+
+					break
+				}
+			}
+
+			if onlyIndirect {
+				continue
+			}
+		}
+
 		wg.Add(1)
 
 		go func(repo string, infos []repoInfo) {
