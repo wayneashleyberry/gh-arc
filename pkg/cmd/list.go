@@ -16,13 +16,16 @@ import (
 func ListArchivedGoModules() error {
 	// Find all go.mod files recursively
 	var goModFiles []string
+
 	err := filepath.WalkDir(".", func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
+
 		if !d.IsDir() && d.Name() == "go.mod" {
 			goModFiles = append(goModFiles, path)
 		}
+
 		return nil
 	})
 	if err != nil {
@@ -31,6 +34,7 @@ func ListArchivedGoModules() error {
 
 	if len(goModFiles) == 0 {
 		fmt.Println("No go.mod files found.")
+
 		return nil
 	}
 
@@ -39,18 +43,21 @@ func ListArchivedGoModules() error {
 		depType   string
 		goModPath string
 	}
+
 	repos := map[string][]repoInfo{}
 
 	for _, goModPath := range goModFiles {
 		data, err := os.ReadFile(goModPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not open %s: %v\n", goModPath, err)
+
 			continue
 		}
 
 		mf, err := modfile.Parse(goModPath, data, nil)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to parse %s: %v\n", goModPath, err)
+
 			continue
 		}
 
@@ -59,10 +66,12 @@ func ListArchivedGoModules() error {
 				parts := strings.Split(req.Mod.Path, "/")
 				if len(parts) >= 3 {
 					repo := fmt.Sprintf("%s/%s", parts[1], parts[2])
+
 					depType := "direct"
 					if req.Indirect {
 						depType = "indirect"
 					}
+
 					repos[repo] = append(repos[repo], repoInfo{depType, goModPath})
 				}
 			}
@@ -75,12 +84,15 @@ func ListArchivedGoModules() error {
 					repo := fmt.Sprintf("%s/%s", parts[1], parts[2])
 					// If replaced repo is already in repos for this go.mod, skip
 					found := false
+
 					for _, info := range repos[repo] {
 						if info.goModPath == goModPath {
 							found = true
+
 							break
 						}
 					}
+
 					if !found {
 						repos[repo] = append(repos[repo], repoInfo{"direct", goModPath})
 					}
@@ -91,6 +103,7 @@ func ListArchivedGoModules() error {
 
 	if len(repos) == 0 {
 		fmt.Println("No github.com modules found in any go.mod file.")
+
 		return nil
 	}
 
@@ -131,6 +144,7 @@ func ListArchivedGoModules() error {
 						printArchived(info.goModPath, repo, result.PushedAt, info.depType)
 					}
 				}
+
 				return
 			}
 
@@ -146,6 +160,7 @@ func ListArchivedGoModules() error {
 			err := client.Get(path, &result)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "error fetching repo %s: %v\n", repo, err)
+
 				return
 			}
 
