@@ -124,9 +124,9 @@ func ListArchivedGoModules() error {
 
 	printArchived := func(goModPath, repo, pushedAt, depType string) {
 		if depType == "indirect" {
-			fmt.Printf("%s: github.com/%s (last push: %s) [indirect]\n", goModPath, repo, pushedAt)
+			fmt.Printf("%s: https://github.com/%s (last push: %s) [indirect]\n", goModPath, repo, pushedAt)
 		} else {
-			fmt.Printf("%s: github.com/%s (last push: %s)\n", goModPath, repo, pushedAt)
+			fmt.Printf("%s: https://github.com/%s (last push: %s)\n", goModPath, repo, pushedAt)
 		}
 	}
 

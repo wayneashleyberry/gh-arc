@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 
-	_ "github.com/awslabs/aws-lambda-go-api-proxy/httpadapter"
 	"github.com/urfave/cli/v2"
 	"github.com/wayneashleyberry/gh-arc/pkg/cmd"
 )
