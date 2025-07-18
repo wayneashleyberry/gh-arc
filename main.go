@@ -1,3 +1,5 @@
+// Command-line tool for listing archived dependencies in Go projects.
+// Provides commands to scan go.mod files and report archived GitHub modules.
 package main
 
 import (

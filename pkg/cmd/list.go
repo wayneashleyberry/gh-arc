@@ -1,3 +1,4 @@
+// Package cmd provides commands for scanning Go module dependencies and reporting archived GitHub repositories.
 package cmd
 
 import (
@@ -69,11 +70,15 @@ type CachedGitHubClient struct {
 	cache  *cache.Cache
 }
 
+// RepoResult contains metadata about a GitHub repository, including its archived status and last push date.
 type RepoResult struct {
 	Archived bool   `json:"archived"`
 	PushedAt string `json:"pushed_at"`
 }
 
+// NewCachedGitHubClient creates a new CachedGitHubClient with a default REST client and an in-memory cache.
+// The cache is used to store repository metadata and reduce redundant API calls.
+// Returns an error if the GitHub API client cannot be created.
 func NewCachedGitHubClient() (*CachedGitHubClient, error) {
 	client, err := api.DefaultRESTClient()
 	if err != nil {
@@ -85,6 +90,9 @@ func NewCachedGitHubClient() (*CachedGitHubClient, error) {
 	return &CachedGitHubClient{client: client, cache: c}, nil
 }
 
+// GetRepoResult returns the archived status and last push date for a GitHub repository.
+// It transparently caches results to avoid redundant API calls.
+// The repo argument should be in the form "owner/repo".
 func (c *CachedGitHubClient) GetRepoResult(repo string) (RepoResult, error) {
 	if cached, found := c.cache.Get(repo); found {
 		return cached.(RepoResult), nil
