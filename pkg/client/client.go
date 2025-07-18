@@ -1,0 +1,66 @@
+package client
+
+import (
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/cli/go-gh/v2/pkg/api"
+	"github.com/patrickmn/go-cache"
+)
+
+// CachedGitHubClient wraps the GitHub API client and transparently caches repo
+// results.
+type CachedGitHubClient struct {
+	client *api.RESTClient
+	cache  *cache.Cache
+}
+
+// RepoResult contains metadata about a GitHub repository, including its
+// archived status and last push date.
+type RepoResult struct {
+	Archived bool   `json:"archived"`
+	PushedAt string `json:"pushed_at"`
+}
+
+// New creates a new CachedGitHubClient with a default REST
+// client and an in-memory cache. The cache is used to store repository metadata
+// and reduce redundant API calls. Returns an error if the GitHub API client
+// cannot be created.
+func New() (*CachedGitHubClient, error) {
+	client, err := api.DefaultRESTClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GitHub API client: %w", err)
+	}
+
+	c := cache.New(1*time.Hour, 2*time.Hour)
+
+	return &CachedGitHubClient{client: client, cache: c}, nil
+}
+
+// GetRepoResult returns the archived status and last push date for a GitHub
+// repository. It transparently caches results to avoid redundant API calls. The
+// repo argument should be in the form "owner/repo".
+func (c *CachedGitHubClient) GetRepoResult(repo string) (RepoResult, error) {
+	if cached, found := c.cache.Get(repo); found {
+		return cached.(RepoResult), nil
+	}
+
+	ownerRepo := strings.Split(repo, "/")
+	if len(ownerRepo) != 2 {
+		return RepoResult{}, fmt.Errorf("invalid repo: %s", repo)
+	}
+
+	var result RepoResult
+
+	path := fmt.Sprintf("repos/%s/%s", ownerRepo[0], ownerRepo[1])
+
+	err := c.client.Get(path, &result)
+	if err != nil {
+		return RepoResult{}, fmt.Errorf("failed to fetch repo %s: %w", repo, err)
+	}
+
+	c.cache.Set(repo, result, cache.DefaultExpiration)
+
+	return result, nil
+}
