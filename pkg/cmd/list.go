@@ -133,7 +133,7 @@ func ListArchivedGoModules(ctx context.Context, checkIndirect bool) (int, error)
 	repos := map[string][]repoInfo{}
 
 	for _, name := range goModFileNames {
-		data, err := os.ReadFile(name)
+		data, err := os.ReadFile(name) // #nosec G304
 		if err != nil {
 			slog.DebugContext(ctx, fmt.Sprintf("could not open %s: %v", name, err))
 
