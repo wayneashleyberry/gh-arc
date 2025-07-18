@@ -7,36 +7,13 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 
 	"github.com/wayneashleyberry/gh-arc/pkg/client"
+	"github.com/wayneashleyberry/gh-arc/pkg/util"
 	"golang.org/x/mod/modfile"
 )
-
-func findFiles(ctx context.Context, name string) ([]string, error) {
-	var files []string
-
-	err := filepath.WalkDir(".", func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return fmt.Errorf("error accessing path %s: %w", path, err)
-		}
-
-		if !d.IsDir() && d.Name() == name {
-			files = append(files, path)
-
-			slog.DebugContext(ctx, "found "+name+" file", slog.String("path", path))
-		}
-
-		return nil
-	})
-	if err != nil {
-		return files, fmt.Errorf("error walking directories: %w", err)
-	}
-
-	return files, nil
-}
 
 // archivedPrinter encapsulates printing and counting archived repos.
 type archivedPrinter struct {
@@ -66,7 +43,7 @@ func (ap *archivedPrinter) Count() int {
 // ListArchived lists archived Go modules, optionally including
 // indirect ones. Returns the count of archived repos found.
 func ListArchived(ctx context.Context, checkIndirect bool) (int, error) {
-	goModFileNames, err := findFiles(ctx, "go.mod")
+	goModFileNames, err := util.FindFiles(ctx, "go.mod")
 	if err != nil {
 		return 0, fmt.Errorf("failed to find go.mod files: %w", err)
 	}
