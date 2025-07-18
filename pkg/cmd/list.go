@@ -62,7 +62,7 @@ func (ap *archivedPrinter) Count() int {
 
 // ListArchivedGoModules lists archived Go modules, optionally including indirect ones. Returns the count of archived repos found.
 func ListArchivedGoModules(checkIndirect bool) (int, error) {
-	goModFiles, err := findGoModFiles()
+	goModFileNames, err := findGoModFiles()
 	if err != nil {
 		return 0, fmt.Errorf("failed to find go.mod files: %w", err)
 	}
@@ -75,17 +75,17 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 
 	repos := map[string][]repoInfo{}
 
-	for _, goModPath := range goModFiles {
-		data, err := os.ReadFile(goModPath)
+	for _, name := range goModFileNames {
+		data, err := os.ReadFile(name)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "could not open %s: %v\n", goModPath, err)
+			fmt.Fprintf(os.Stderr, "could not open %s: %v\n", name, err)
 
 			continue
 		}
 
-		mf, err := modfile.Parse(goModPath, data, nil)
+		mf, err := modfile.Parse(name, data, nil)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to parse %s: %v\n", goModPath, err)
+			fmt.Fprintf(os.Stderr, "failed to parse %s: %v\n", name, err)
 
 			continue
 		}
@@ -101,7 +101,7 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 						depType = indirectDepType
 					}
 
-					repos[repo] = append(repos[repo], repoInfo{depType, goModPath})
+					repos[repo] = append(repos[repo], repoInfo{depType, name})
 				}
 			}
 		}
@@ -115,7 +115,7 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 					found := false
 
 					for _, info := range repos[repo] {
-						if info.goModPath == goModPath {
+						if info.goModPath == name {
 							found = true
 
 							break
@@ -123,7 +123,7 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 					}
 
 					if !found {
-						repos[repo] = append(repos[repo], repoInfo{"direct", goModPath})
+						repos[repo] = append(repos[repo], repoInfo{"direct", name})
 					}
 				}
 			}
