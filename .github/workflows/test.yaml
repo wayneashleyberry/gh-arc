@@ -22,6 +22,8 @@ jobs:
       - run: go mod download
       - run: go mod verify
       - run: go test -v ./... -coverprofile=coverage.out
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload coverage report
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
