@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -59,7 +61,7 @@ func (ap *archivedPrinter) Count() int {
 }
 
 // ListArchivedGoModules lists archived Go modules, optionally including indirect ones. Returns the count of archived repos found.
-func ListArchivedGoModules(checkIndirect bool) (int, error) {
+func ListArchivedGoModules(ctx context.Context, checkIndirect bool) (int, error) {
 	goModFileNames, err := findGoModFiles()
 	if err != nil {
 		return 0, fmt.Errorf("failed to find go.mod files: %w", err)
@@ -76,14 +78,14 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 	for _, name := range goModFileNames {
 		data, err := os.ReadFile(name)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "could not open %s: %v\n", name, err)
+			slog.DebugContext(ctx, fmt.Sprintf("could not open %s: %v", name, err))
 
 			continue
 		}
 
 		mf, err := modfile.Parse(name, data, nil)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to parse %s: %v\n", name, err)
+			slog.DebugContext(ctx, fmt.Sprintf("failed to parse %s: %v", name, err))
 
 			continue
 		}
@@ -124,14 +126,14 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 	}
 
 	if len(repos) == 0 {
-		fmt.Println("No github.com modules found in any go.mod file.")
+		slog.DebugContext(ctx, "no github.com modules found in any go.mod file")
 
 		return 0, nil
 	}
 
 	client, err := api.DefaultRESTClient()
 	if err != nil {
-		return 0, fmt.Errorf("failed to create GitHub API client: %w", err)
+		return 0, fmt.Errorf("failed to create github api client: %w", err)
 	}
 
 	// Set up cache with default expiration 1 hour, cleanup interval 2 hours
@@ -192,7 +194,7 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 
 			err := client.Get(path, &result)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "error fetching repo %s: %v\n", repo, err)
+				slog.DebugContext(ctx, fmt.Sprintf("error fetching repo %s: %v", repo, err))
 
 				return
 			}

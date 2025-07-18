@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -59,9 +60,11 @@ func run(_ context.Context) error {
 					},
 				},
 				Action: func(c *cli.Context) error {
-					count, err := cmd.ListArchivedGoModules(c.Bool("indirect"))
+					checkIndirect := c.Bool("indirect")
+
+					count, err := cmd.ListArchivedGoModules(c.Context, checkIndirect)
 					if err != nil {
-						return err
+						return fmt.Errorf("failed to list archived go modules: %w", err)
 					}
 
 					if count > 0 {
