@@ -1,4 +1,5 @@
-// Package cmd provides commands for scanning Go module dependencies and reporting archived GitHub repositories.
+// Package cmd provides commands for scanning Go module dependencies and
+// reporting archived GitHub repositories.
 package cmd
 
 import (
@@ -64,21 +65,24 @@ func (ap *archivedPrinter) Count() int {
 	return int(ap.count)
 }
 
-// CachedGitHubClient wraps the GitHub API client and transparently caches repo results.
+// CachedGitHubClient wraps the GitHub API client and transparently caches repo
+// results.
 type CachedGitHubClient struct {
 	client *api.RESTClient
 	cache  *cache.Cache
 }
 
-// RepoResult contains metadata about a GitHub repository, including its archived status and last push date.
+// RepoResult contains metadata about a GitHub repository, including its
+// archived status and last push date.
 type RepoResult struct {
 	Archived bool   `json:"archived"`
 	PushedAt string `json:"pushed_at"`
 }
 
-// NewCachedGitHubClient creates a new CachedGitHubClient with a default REST client and an in-memory cache.
-// The cache is used to store repository metadata and reduce redundant API calls.
-// Returns an error if the GitHub API client cannot be created.
+// NewCachedGitHubClient creates a new CachedGitHubClient with a default REST
+// client and an in-memory cache. The cache is used to store repository metadata
+// and reduce redundant API calls. Returns an error if the GitHub API client
+// cannot be created.
 func NewCachedGitHubClient() (*CachedGitHubClient, error) {
 	client, err := api.DefaultRESTClient()
 	if err != nil {
@@ -90,9 +94,9 @@ func NewCachedGitHubClient() (*CachedGitHubClient, error) {
 	return &CachedGitHubClient{client: client, cache: c}, nil
 }
 
-// GetRepoResult returns the archived status and last push date for a GitHub repository.
-// It transparently caches results to avoid redundant API calls.
-// The repo argument should be in the form "owner/repo".
+// GetRepoResult returns the archived status and last push date for a GitHub
+// repository. It transparently caches results to avoid redundant API calls. The
+// repo argument should be in the form "owner/repo".
 func (c *CachedGitHubClient) GetRepoResult(repo string) (RepoResult, error) {
 	if cached, found := c.cache.Get(repo); found {
 		return cached.(RepoResult), nil
@@ -117,14 +121,14 @@ func (c *CachedGitHubClient) GetRepoResult(repo string) (RepoResult, error) {
 	return result, nil
 }
 
-// ListArchivedGoModules lists archived Go modules, optionally including indirect ones. Returns the count of archived repos found.
+// ListArchivedGoModules lists archived Go modules, optionally including
+// indirect ones. Returns the count of archived repos found.
 func ListArchivedGoModules(ctx context.Context, checkIndirect bool) (int, error) {
 	goModFileNames, err := findFiles(ctx, "go.mod")
 	if err != nil {
 		return 0, fmt.Errorf("failed to find go.mod files: %w", err)
 	}
 
-	// repoKey: github.com/owner/repo, value: slice of info structs
 	type repoInfo struct {
 		indirect  bool
 		goModPath string
@@ -136,51 +140,56 @@ func ListArchivedGoModules(ctx context.Context, checkIndirect bool) (int, error)
 		data, err := os.ReadFile(name) // #nosec G304
 		if err != nil {
 			slog.DebugContext(ctx, fmt.Sprintf("could not open %s: %v", name, err))
-
 			continue
 		}
 
 		mf, err := modfile.Parse(name, data, nil)
 		if err != nil {
 			slog.DebugContext(ctx, fmt.Sprintf("failed to parse %s: %v", name, err))
-
 			continue
 		}
 
-		for _, req := range mf.Require {
-			if strings.HasPrefix(req.Mod.Path, "github.com/") {
-				parts := strings.Split(req.Mod.Path, "/")
-				if len(parts) < 3 {
-					continue
-				}
-
-				repo := fmt.Sprintf("%s/%s", parts[1], parts[2])
-				repos[repo] = append(repos[repo], repoInfo{req.Indirect, name})
+		addDep := func(modPath string, indirect bool) {
+			if !strings.HasPrefix(modPath, "github.com/") {
+				return
 			}
+
+			parts := strings.Split(modPath, "/")
+			if len(parts) < 3 {
+				return
+			}
+
+			repo := fmt.Sprintf("%s/%s", parts[1], parts[2])
+			repos[repo] = append(repos[repo], repoInfo{indirect, name})
+		}
+
+		for _, req := range mf.Require {
+			addDep(req.Mod.Path, req.Indirect)
 		}
 
 		for _, rep := range mf.Replace {
-			if strings.HasPrefix(rep.New.Path, "github.com/") {
-				parts := strings.Split(rep.New.Path, "/")
-				if len(parts) < 3 {
-					continue
+			if !strings.HasPrefix(rep.New.Path, "github.com/") {
+				continue
+			}
+
+			parts := strings.Split(rep.New.Path, "/")
+			if len(parts) < 3 {
+				continue
+			}
+
+			repo := fmt.Sprintf("%s/%s", parts[1], parts[2])
+
+			found := false
+
+			for _, info := range repos[repo] {
+				if info.goModPath == name {
+					found = true
+					break
 				}
+			}
 
-				repo := fmt.Sprintf("%s/%s", parts[1], parts[2])
-				// If replaced repo is already in repos for this go.mod, skip
-				found := false
-
-				for _, info := range repos[repo] {
-					if info.goModPath == name {
-						found = true
-
-						break
-					}
-				}
-
-				if !found {
-					repos[repo] = append(repos[repo], repoInfo{false, name})
-				}
+			if !found {
+				repos[repo] = append(repos[repo], repoInfo{false, name})
 			}
 		}
 	}
@@ -201,7 +210,10 @@ func ListArchivedGoModules(ctx context.Context, checkIndirect bool) (int, error)
 	ap := &archivedPrinter{}
 
 	for repo, infos := range repos {
-		// If checkIndirect is false and all infos are indirect, skip this repo entirely
+		// Skip this repository if the user does not want to include indirect
+		// dependencies and all references to this repository are indirect. This
+		// ensures that only directly required repositories are processed unless
+		// indirects are explicitly requested.
 		if !checkIndirect {
 			onlyIndirect := true
 
