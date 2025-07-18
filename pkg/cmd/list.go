@@ -21,7 +21,7 @@ func findGoModFiles() ([]string, error) {
 
 	err := filepath.WalkDir(".", func(path string, d os.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return fmt.Errorf("error accessing path %s: %w", path, err)
 		}
 
 		if !d.IsDir() && d.Name() == "go.mod" {
