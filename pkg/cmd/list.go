@@ -63,6 +63,52 @@ func (ap *archivedPrinter) Count() int {
 	return int(ap.count)
 }
 
+// CachedGitHubClient wraps the GitHub API client and transparently caches repo results.
+type CachedGitHubClient struct {
+	client *api.RESTClient
+	cache  *cache.Cache
+}
+
+type RepoResult struct {
+	Archived bool   `json:"archived"`
+	PushedAt string `json:"pushed_at"`
+}
+
+func NewCachedGitHubClient() (*CachedGitHubClient, error) {
+	client, err := api.DefaultRESTClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GitHub API client: %w", err)
+	}
+
+	c := cache.New(1*time.Hour, 2*time.Hour)
+
+	return &CachedGitHubClient{client: client, cache: c}, nil
+}
+
+func (c *CachedGitHubClient) GetRepoResult(repo string) (RepoResult, error) {
+	if cached, found := c.cache.Get(repo); found {
+		return cached.(RepoResult), nil
+	}
+
+	ownerRepo := strings.Split(repo, "/")
+	if len(ownerRepo) != 2 {
+		return RepoResult{}, fmt.Errorf("invalid repo: %s", repo)
+	}
+
+	var result RepoResult
+
+	path := fmt.Sprintf("repos/%s/%s", ownerRepo[0], ownerRepo[1])
+
+	err := c.client.Get(path, &result)
+	if err != nil {
+		return RepoResult{}, fmt.Errorf("failed to fetch repo %s: %w", repo, err)
+	}
+
+	c.cache.Set(repo, result, cache.DefaultExpiration)
+
+	return result, nil
+}
+
 // ListArchivedGoModules lists archived Go modules, optionally including indirect ones. Returns the count of archived repos found.
 func ListArchivedGoModules(ctx context.Context, checkIndirect bool) (int, error) {
 	goModFileNames, err := findFiles(ctx, "go.mod")
@@ -137,20 +183,12 @@ func ListArchivedGoModules(ctx context.Context, checkIndirect bool) (int, error)
 		return 0, nil
 	}
 
-	client, err := api.DefaultRESTClient()
+	cachedClient, err := NewCachedGitHubClient()
 	if err != nil {
 		return 0, fmt.Errorf("failed to create github api client: %w", err)
 	}
 
-	// Set up cache with default expiration 1 hour, cleanup interval 2 hours
-	c := cache.New(1*time.Hour, 2*time.Hour)
-
 	var wg sync.WaitGroup
-
-	type repoResult struct {
-		Archived bool   `json:"archived"`
-		PushedAt string `json:"pushed_at"`
-	}
 
 	ap := &archivedPrinter{}
 
@@ -177,40 +215,12 @@ func ListArchivedGoModules(ctx context.Context, checkIndirect bool) (int, error)
 		go func(repo string, infos []repoInfo) {
 			defer wg.Done()
 
-			// Check cache first
-			if cached, found := c.Get(repo); found {
-				result := cached.(repoResult)
-				if result.Archived {
-					for _, info := range infos {
-						if !checkIndirect && info.indirect {
-							continue
-						}
-
-						ap.Print(info.goModPath, repo, result.PushedAt, info.indirect)
-					}
-				}
-
-				return
-			}
-
-			ownerRepo := strings.Split(repo, "/")
-			if len(ownerRepo) != 2 {
-				return
-			}
-
-			var result repoResult
-
-			path := fmt.Sprintf("repos/%s/%s", ownerRepo[0], ownerRepo[1])
-
-			err := client.Get(path, &result)
+			result, err := cachedClient.GetRepoResult(repo)
 			if err != nil {
 				slog.DebugContext(ctx, fmt.Sprintf("error fetching repo %s: %v", repo, err))
 
 				return
 			}
-
-			// Store in cache
-			c.Set(repo, result, cache.DefaultExpiration)
 
 			if result.Archived {
 				for _, info := range infos {
