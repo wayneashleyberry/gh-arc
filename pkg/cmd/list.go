@@ -13,8 +13,6 @@ import (
 	"golang.org/x/mod/modfile"
 )
 
-const indirectDepType = "indirect"
-
 func findGoModFiles() ([]string, error) {
 	// Find all go.mod files recursively
 	var goModFiles []string
@@ -43,8 +41,8 @@ type archivedPrinter struct {
 	mu    sync.Mutex
 }
 
-func (ap *archivedPrinter) Print(goModPath, repo, pushedAt, depType string) {
-	if depType == indirectDepType {
+func (ap *archivedPrinter) Print(goModPath, repo, pushedAt string, indirect bool) {
+	if indirect {
 		fmt.Printf("%s: https://github.com/%s (last push: %s) // indirect\n", goModPath, repo, pushedAt)
 	} else {
 		fmt.Printf("%s: https://github.com/%s (last push: %s)\n", goModPath, repo, pushedAt)
@@ -69,7 +67,7 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 
 	// repoKey: github.com/owner/repo, value: slice of info structs
 	type repoInfo struct {
-		depType   string
+		indirect  bool
 		goModPath string
 	}
 
@@ -96,12 +94,7 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 				if len(parts) >= 3 {
 					repo := fmt.Sprintf("%s/%s", parts[1], parts[2])
 
-					depType := "direct"
-					if req.Indirect {
-						depType = indirectDepType
-					}
-
-					repos[repo] = append(repos[repo], repoInfo{depType, name})
+					repos[repo] = append(repos[repo], repoInfo{req.Indirect, name})
 				}
 			}
 		}
@@ -123,7 +116,7 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 					}
 
 					if !found {
-						repos[repo] = append(repos[repo], repoInfo{"direct", name})
+						repos[repo] = append(repos[repo], repoInfo{false, name})
 					}
 				}
 			}
@@ -157,15 +150,12 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 		// If checkIndirect is false and all infos are indirect, skip this repo entirely
 		if !checkIndirect {
 			onlyIndirect := true
-
 			for _, info := range infos {
-				if info.depType == "direct" {
+				if !info.indirect {
 					onlyIndirect = false
-
 					break
 				}
 			}
-
 			if onlyIndirect {
 				continue
 			}
@@ -181,11 +171,10 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 				result := cached.(repoResult)
 				if result.Archived {
 					for _, info := range infos {
-						if !checkIndirect && info.depType == indirectDepType {
+						if !checkIndirect && info.indirect {
 							continue
 						}
-
-						ap.Print(info.goModPath, repo, result.PushedAt, info.depType)
+						ap.Print(info.goModPath, repo, result.PushedAt, info.indirect)
 					}
 				}
 
@@ -213,11 +202,10 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 
 			if result.Archived {
 				for _, info := range infos {
-					if !checkIndirect && info.depType == indirectDepType {
+					if !checkIndirect && info.indirect {
 						continue
 					}
-
-					ap.Print(info.goModPath, repo, result.PushedAt, info.depType)
+					ap.Print(info.goModPath, repo, result.PushedAt, info.indirect)
 				}
 			}
 		}(repo, infos)
