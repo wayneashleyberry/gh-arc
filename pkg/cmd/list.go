@@ -96,33 +96,36 @@ func ListArchivedGoModules(ctx context.Context, checkIndirect bool) (int, error)
 		for _, req := range mf.Require {
 			if strings.HasPrefix(req.Mod.Path, "github.com/") {
 				parts := strings.Split(req.Mod.Path, "/")
-				if len(parts) >= 3 {
-					repo := fmt.Sprintf("%s/%s", parts[1], parts[2])
-
-					repos[repo] = append(repos[repo], repoInfo{req.Indirect, name})
+				if len(parts) < 3 {
+					continue
 				}
+
+				repo := fmt.Sprintf("%s/%s", parts[1], parts[2])
+				repos[repo] = append(repos[repo], repoInfo{req.Indirect, name})
 			}
 		}
 
 		for _, rep := range mf.Replace {
 			if strings.HasPrefix(rep.New.Path, "github.com/") {
 				parts := strings.Split(rep.New.Path, "/")
-				if len(parts) >= 3 {
-					repo := fmt.Sprintf("%s/%s", parts[1], parts[2])
-					// If replaced repo is already in repos for this go.mod, skip
-					found := false
+				if len(parts) < 3 {
+					continue
+				}
 
-					for _, info := range repos[repo] {
-						if info.goModPath == name {
-							found = true
+				repo := fmt.Sprintf("%s/%s", parts[1], parts[2])
+				// If replaced repo is already in repos for this go.mod, skip
+				found := false
 
-							break
-						}
+				for _, info := range repos[repo] {
+					if info.goModPath == name {
+						found = true
+
+						break
 					}
+				}
 
-					if !found {
-						repos[repo] = append(repos[repo], repoInfo{false, name})
-					}
+				if !found {
+					repos[repo] = append(repos[repo], repoInfo{false, name})
 				}
 			}
 		}
