@@ -11,7 +11,7 @@ import (
 	"sync"
 
 	"github.com/wayneashleyberry/gh-arc/pkg/client"
-	"github.com/wayneashleyberry/gh-arc/pkg/util"
+	"github.com/wayneashleyberry/gh-arc/pkg/files"
 	"golang.org/x/mod/modfile"
 )
 
@@ -43,7 +43,7 @@ func (ap *archivedPrinter) Count() int {
 // ListArchived lists archived Go modules, optionally including
 // indirect ones. Returns the count of archived repos found.
 func ListArchived(ctx context.Context, checkIndirect bool) (int, error) {
-	goModFileNames, err := util.FindFiles(ctx, "go.mod")
+	goModFileNames, err := files.RecursiveFind(ctx, "go.mod")
 	if err != nil {
 		return 0, fmt.Errorf("failed to find go.mod files: %w", err)
 	}

@@ -9,22 +9,31 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func captureStdout(f func()) string {
+func captureStdout(t *testing.T, f func()) string {
+	t.Helper()
+
 	old := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
+
 	f()
-	w.Close()
+
+	_ = w.Close()
+
 	os.Stdout = old
+
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+
+	_, _ = io.Copy(&buf, r)
+
 	return buf.String()
 }
 
 func TestArchivedPrinter_Print_Direct(t *testing.T) {
 	t.Parallel()
+
 	ap := &archivedPrinter{}
-	out := captureStdout(func() {
+	out := captureStdout(t, func() {
 		ap.Print("foo/go.mod", "owner/repo", "2025-07-18T12:00:00Z", false)
 	})
 
@@ -35,8 +44,9 @@ func TestArchivedPrinter_Print_Direct(t *testing.T) {
 
 func TestArchivedPrinter_Print_Indirect(t *testing.T) {
 	t.Parallel()
+
 	ap := &archivedPrinter{}
-	out := captureStdout(func() {
+	out := captureStdout(t, func() {
 		ap.Print("bar/go.mod", "owner/repo", "2025-07-18T12:00:00Z", true)
 	})
 
