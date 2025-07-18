@@ -24,6 +24,7 @@ linters:
     - gochecksumtype
     - goconst
     - gocritic
+    - gocyclo
     - godot
     - godox
     - goheader
@@ -68,7 +69,6 @@ linters:
     - tagalign
     - testableexamples
     - testifylint
-    - testpackage
     - thelper
     - tparallel
     - unconvert
@@ -78,26 +78,9 @@ linters:
     - whitespace
     - wsl_v5
     - zerologlint
-  exclusions:
-    generated: lax
-    presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
 formatters:
   enable:
     - gci
     - gofmt
     - gofumpt
     - goimports
-  exclusions:
-    generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$

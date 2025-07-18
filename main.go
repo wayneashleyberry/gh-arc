@@ -1,13 +1,15 @@
+// Command-line tool for listing archived dependencies in Go projects.
+// Provides commands to scan go.mod files and report archived GitHub modules.
 package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"log/slog"
 	"os"
 
 	"github.com/urfave/cli/v2"
-	"github.com/wayneashleyberry/gh-arc/pkg/cmd"
+	"github.com/wayneashleyberry/gh-arc/pkg/gomod"
 )
 
 func setDefaultLogger(level slog.Leveler) {
@@ -24,7 +26,8 @@ func main() {
 	ctx := context.Background()
 
 	if err := run(ctx); err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }
 
@@ -59,9 +62,11 @@ func run(_ context.Context) error {
 					},
 				},
 				Action: func(c *cli.Context) error {
-					count, err := cmd.ListArchivedGoModules(c.Bool("indirect"))
+					checkIndirect := c.Bool("indirect")
+
+					count, err := gomod.ListArchived(c.Context, checkIndirect)
 					if err != nil {
-						return err
+						return fmt.Errorf("failed to list archived go modules: %w", err)
 					}
 
 					if count > 0 {
