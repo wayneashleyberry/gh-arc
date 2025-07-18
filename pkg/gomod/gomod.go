@@ -1,6 +1,6 @@
-// Package cmd provides commands for scanning Go module dependencies and
+// Package gomod provides commands for scanning Go module dependencies and
 // reporting archived GitHub repositories.
-package cmd
+package gomod
 
 import (
 	"context"
@@ -63,9 +63,9 @@ func (ap *archivedPrinter) Count() int {
 	return int(ap.count)
 }
 
-// ListArchivedGoModules lists archived Go modules, optionally including
+// ListArchived lists archived Go modules, optionally including
 // indirect ones. Returns the count of archived repos found.
-func ListArchivedGoModules(ctx context.Context, checkIndirect bool) (int, error) {
+func ListArchived(ctx context.Context, checkIndirect bool) (int, error) {
 	goModFileNames, err := findFiles(ctx, "go.mod")
 	if err != nil {
 		return 0, fmt.Errorf("failed to find go.mod files: %w", err)
