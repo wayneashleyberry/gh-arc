@@ -140,12 +140,14 @@ func ListArchivedGoModules(ctx context.Context, checkIndirect bool) (int, error)
 		data, err := os.ReadFile(name) // #nosec G304
 		if err != nil {
 			slog.DebugContext(ctx, fmt.Sprintf("could not open %s: %v", name, err))
+
 			continue
 		}
 
 		mf, err := modfile.Parse(name, data, nil)
 		if err != nil {
 			slog.DebugContext(ctx, fmt.Sprintf("failed to parse %s: %v", name, err))
+
 			continue
 		}
 
@@ -184,6 +186,7 @@ func ListArchivedGoModules(ctx context.Context, checkIndirect bool) (int, error)
 			for _, info := range repos[repo] {
 				if info.goModPath == name {
 					found = true
+
 					break
 				}
 			}
