@@ -2,9 +2,10 @@
 
 > ✨ A GitHub (gh) CLI extension to find archived dependencies.
 
-[![Release](https://github.com/wayneashleyberry/gh-arc/actions/workflows/release.yaml/badge.svg)](https://github.com/wayneashleyberry/gh-arc/actions/workflows/release.yaml)
-[![Lint](https://github.com/wayneashleyberry/gh-arc/actions/workflows/lint.yaml/badge.svg)](https://github.com/wayneashleyberry/gh-arc/actions/workflows/lint.yaml)
-[![Run](https://github.com/wayneashleyberry/gh-arc/actions/workflows/run.yaml/badge.svg)](https://github.com/wayneashleyberry/gh-arc/actions/workflows/run.yaml)
+[![lint](https://github.com/wayneashleyberry/gh-arc/actions/workflows/lint.yaml/badge.svg)](https://github.com/wayneashleyberry/gh-arc/actions/workflows/lint.yaml)
+[![run](https://github.com/wayneashleyberry/gh-arc/actions/workflows/run.yaml/badge.svg)](https://github.com/wayneashleyberry/gh-arc/actions/workflows/run.yaml)
+[![test](https://github.com/wayneashleyberry/gh-arc/actions/workflows/test.yaml/badge.svg)](https://github.com/wayneashleyberry/gh-arc/actions/workflows/test.yaml)
+[![release](https://github.com/wayneashleyberry/gh-arc/actions/workflows/release.yaml/badge.svg)](https://github.com/wayneashleyberry/gh-arc/actions/workflows/release.yaml)
 
 ### Why?
 
