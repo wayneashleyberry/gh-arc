@@ -40,20 +40,15 @@ func (ap *archivedPrinter) Count() int {
 	return int(ap.count)
 }
 
-// ListArchived lists archived Go modules, optionally including
-// indirect ones. Returns the count of archived repos found.
-func ListArchived(ctx context.Context, checkIndirect bool) (int, error) {
-	goModFileNames, err := files.RecursiveFind(ctx, "go.mod")
-	if err != nil {
-		return 0, fmt.Errorf("failed to find go.mod files: %w", err)
-	}
+// RepoInfo holds information about a discovered repository in a go.mod file.
+type RepoInfo struct {
+	indirect  bool
+	goModPath string
+}
 
-	type repoInfo struct {
-		indirect  bool
-		goModPath string
-	}
-
-	repos := map[string][]repoInfo{}
+// DiscoverGitHubDependencies parses the provided go.mod files and returns a map of GitHub repositories to their info.
+func DiscoverGitHubDependencies(ctx context.Context, goModFileNames []string) map[string][]RepoInfo {
+	repos := map[string][]RepoInfo{}
 
 	for _, name := range goModFileNames {
 		data, err := os.ReadFile(name) // #nosec G304
@@ -81,7 +76,7 @@ func ListArchived(ctx context.Context, checkIndirect bool) (int, error) {
 			}
 
 			repo := fmt.Sprintf("%s/%s", parts[1], parts[2])
-			repos[repo] = append(repos[repo], repoInfo{indirect, name})
+			repos[repo] = append(repos[repo], RepoInfo{indirect, name})
 		}
 
 		for _, req := range mf.Require {
@@ -99,7 +94,6 @@ func ListArchived(ctx context.Context, checkIndirect bool) (int, error) {
 			}
 
 			repo := fmt.Sprintf("%s/%s", parts[1], parts[2])
-
 			found := false
 
 			for _, info := range repos[repo] {
@@ -111,10 +105,23 @@ func ListArchived(ctx context.Context, checkIndirect bool) (int, error) {
 			}
 
 			if !found {
-				repos[repo] = append(repos[repo], repoInfo{false, name})
+				repos[repo] = append(repos[repo], RepoInfo{false, name})
 			}
 		}
 	}
+
+	return repos
+}
+
+// ListArchived lists archived Go modules, optionally including
+// indirect ones. Returns the count of archived repos found.
+func ListArchived(ctx context.Context, checkIndirect bool) (int, error) {
+	goModFileNames, err := files.RecursiveFind(ctx, "go.mod")
+	if err != nil {
+		return 0, fmt.Errorf("failed to find go.mod files: %w", err)
+	}
+
+	repos := DiscoverGitHubDependencies(ctx, goModFileNames)
 
 	if len(repos) == 0 {
 		slog.DebugContext(ctx, "no github.com modules found in any go.mod file")
@@ -154,7 +161,7 @@ func ListArchived(ctx context.Context, checkIndirect bool) (int, error) {
 
 		wg.Add(1)
 
-		go func(repo string, infos []repoInfo) {
+		go func(repo string, infos []RepoInfo) {
 			defer wg.Done()
 
 			result, err := client.GetRepoResult(repo)
