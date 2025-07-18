@@ -11,8 +11,13 @@ import (
 
 // CachedGitHubClient wraps the GitHub API client and transparently caches repo
 // results.
-type CachedGitHubClient struct {
-	client *api.RESTClient
+// restClient defines the minimal interface needed for CachedGitHubClient.
+type restClient interface {
+	Get(string, any) error
+}
+
+type Client struct {
+	client restClient
 	cache  *cache.Cache
 }
 
@@ -27,7 +32,8 @@ type RepoResult struct {
 // client and an in-memory cache. The cache is used to store repository metadata
 // and reduce redundant API calls. Returns an error if the GitHub API client
 // cannot be created.
-func New() (*CachedGitHubClient, error) {
+// New creates a new CachedGitHubClient with a default REST client and an in-memory cache.
+func New() (*Client, error) {
 	client, err := api.DefaultRESTClient()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GitHub API client: %w", err)
@@ -35,13 +41,20 @@ func New() (*CachedGitHubClient, error) {
 
 	c := cache.New(1*time.Hour, 2*time.Hour)
 
-	return &CachedGitHubClient{client: client, cache: c}, nil
+	return &Client{client: client, cache: c}, nil
+}
+
+// NewWithClient allows injecting a custom REST client (for testing).
+func NewWithClient(client restClient) *Client {
+	c := cache.New(1*time.Hour, 2*time.Hour)
+
+	return &Client{client: client, cache: c}
 }
 
 // GetRepoResult returns the archived status and last push date for a GitHub
 // repository. It transparently caches results to avoid redundant API calls. The
 // repo argument should be in the form "owner/repo".
-func (c *CachedGitHubClient) GetRepoResult(repo string) (RepoResult, error) {
+func (c *Client) GetRepoResult(repo string) (RepoResult, error) {
 	if cached, found := c.cache.Get(repo); found {
 		return cached.(RepoResult), nil
 	}
