@@ -37,6 +37,29 @@ func findGoModFiles() ([]string, error) {
 	return goModFiles, nil
 }
 
+// archivedPrinter encapsulates printing and counting archived repos.
+type archivedPrinter struct {
+	count int64
+	mu    sync.Mutex
+}
+
+func (ap *archivedPrinter) Print(goModPath, repo, pushedAt, depType string) {
+	if depType == indirectDepType {
+		fmt.Printf("%s: https://github.com/%s (last push: %s) // indirect\n", goModPath, repo, pushedAt)
+	} else {
+		fmt.Printf("%s: https://github.com/%s (last push: %s)\n", goModPath, repo, pushedAt)
+	}
+	ap.mu.Lock()
+	ap.count++
+	ap.mu.Unlock()
+}
+
+func (ap *archivedPrinter) Count() int {
+	ap.mu.Lock()
+	defer ap.mu.Unlock()
+	return int(ap.count)
+}
+
 // ListArchivedGoModules lists archived Go modules, optionally including indirect ones. Returns the count of archived repos found.
 func ListArchivedGoModules(checkIndirect bool) (int, error) {
 	goModFiles, err := findGoModFiles()
@@ -128,24 +151,7 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 		PushedAt string `json:"pushed_at"`
 	}
 
-	var (
-		archivedCount int64
-		countMu       sync.Mutex
-	)
-
-	printArchived := func(goModPath, repo, pushedAt, depType string) {
-		if depType == indirectDepType {
-			fmt.Printf("%s: https://github.com/%s (last push: %s) // indirect\n", goModPath, repo, pushedAt)
-		} else {
-			fmt.Printf("%s: https://github.com/%s (last push: %s)\n", goModPath, repo, pushedAt)
-		}
-
-		countMu.Lock()
-
-		archivedCount++
-
-		countMu.Unlock()
-	}
+	ap := &archivedPrinter{}
 
 	for repo, infos := range repos {
 		// If checkIndirect is false and all infos are indirect, skip this repo entirely
@@ -179,7 +185,7 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 							continue
 						}
 
-						printArchived(info.goModPath, repo, result.PushedAt, info.depType)
+						ap.Print(info.goModPath, repo, result.PushedAt, info.depType)
 					}
 				}
 
@@ -211,7 +217,7 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 						continue
 					}
 
-					printArchived(info.goModPath, repo, result.PushedAt, info.depType)
+					ap.Print(info.goModPath, repo, result.PushedAt, info.depType)
 				}
 			}
 		}(repo, infos)
@@ -219,5 +225,5 @@ func ListArchivedGoModules(checkIndirect bool) (int, error) {
 
 	wg.Wait()
 
-	return int(archivedCount), nil
+	return ap.Count(), nil
 }
