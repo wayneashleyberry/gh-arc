@@ -20,6 +20,8 @@ func (m *mockRESTClient) Get(path string, v any) error {
 }
 
 func TestNew(t *testing.T) {
+	t.Parallel()
+
 	c, err := New()
 	require.NoError(t, err)
 	require.NotNil(t, c)
@@ -27,6 +29,8 @@ func TestNew(t *testing.T) {
 }
 
 func TestGetRepoResult_CacheHit(t *testing.T) {
+	t.Parallel()
+
 	c := NewWithClient(&mockRESTClient{})
 	repo := "owner/repo"
 	want := RepoResult{Archived: true, PushedAt: "2024-01-01T00:00:00Z"}
@@ -38,6 +42,8 @@ func TestGetRepoResult_CacheHit(t *testing.T) {
 }
 
 func TestGetRepoResult_InvalidRepo(t *testing.T) {
+	t.Parallel()
+
 	c := NewWithClient(&mockRESTClient{})
 
 	_, err := c.GetRepoResult("invalidrepo")
@@ -45,8 +51,10 @@ func TestGetRepoResult_InvalidRepo(t *testing.T) {
 }
 
 func TestGetRepoResult_APIFailure(t *testing.T) {
+	t.Parallel()
+
 	c := NewWithClient(&mockRESTClient{
-		getFunc: func(path string, v any) error {
+		getFunc: func(_ string, _ any) error {
 			return errors.New("api error")
 		},
 	})
@@ -57,8 +65,10 @@ func TestGetRepoResult_APIFailure(t *testing.T) {
 }
 
 func TestGetRepoResult_APISuccess(t *testing.T) {
+	t.Parallel()
+
 	c := NewWithClient(&mockRESTClient{
-		getFunc: func(path string, v any) error {
+		getFunc: func(_ string, v any) error {
 			r, ok := v.(*RepoResult)
 			if !ok {
 				return errors.New("wrong type")
@@ -74,7 +84,7 @@ func TestGetRepoResult_APISuccess(t *testing.T) {
 	got, err := c.GetRepoResult(repo)
 	require.NoError(t, err)
 
-	require.Equal(t, false, got.Archived)
+	require.False(t, got.Archived)
 	require.Equal(t, "2025-07-18T12:00:00Z", got.PushedAt)
 
 	// Should be cached now

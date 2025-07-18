@@ -1,3 +1,6 @@
+// Package client provides a GitHub API client with transparent caching for repository metadata.
+// It allows efficient retrieval of repository information such as archived status and last push date,
+// reducing redundant API calls by using an in-memory cache.
 package client
 
 import (
@@ -13,9 +16,11 @@ import (
 // results.
 // restClient defines the minimal interface needed for CachedGitHubClient.
 type restClient interface {
-	Get(string, any) error
+	Get(path string, resp any) error
 }
 
+// Client provides methods to interact with the GitHub API and transparently cache repository metadata.
+// It is safe for concurrent use by multiple goroutines.
 type Client struct {
 	client restClient
 	cache  *cache.Cache
