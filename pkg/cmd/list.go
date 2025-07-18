@@ -191,7 +191,7 @@ func ListArchivedGoModules(ctx context.Context, checkIndirect bool) (int, error)
 		return 0, nil
 	}
 
-	cachedClient, err := NewCachedGitHubClient()
+	client, err := NewCachedGitHubClient()
 	if err != nil {
 		return 0, fmt.Errorf("failed to create github api client: %w", err)
 	}
@@ -223,7 +223,7 @@ func ListArchivedGoModules(ctx context.Context, checkIndirect bool) (int, error)
 		go func(repo string, infos []repoInfo) {
 			defer wg.Done()
 
-			result, err := cachedClient.GetRepoResult(repo)
+			result, err := client.GetRepoResult(repo)
 			if err != nil {
 				slog.DebugContext(ctx, fmt.Sprintf("error fetching repo %s: %v", repo, err))
 
