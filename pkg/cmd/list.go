@@ -15,26 +15,27 @@ import (
 	"golang.org/x/mod/modfile"
 )
 
-func findGoModFiles() ([]string, error) {
-	// Find all go.mod files recursively
-	var goModFiles []string
+func findFiles(ctx context.Context, name string) ([]string, error) {
+	var files []string
 
 	err := filepath.WalkDir(".", func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return fmt.Errorf("error accessing path %s: %w", path, err)
 		}
 
-		if !d.IsDir() && d.Name() == "go.mod" {
-			goModFiles = append(goModFiles, path)
+		if !d.IsDir() && d.Name() == name {
+			files = append(files, path)
+
+			slog.DebugContext(ctx, "found "+name+" file", slog.String("path", path))
 		}
 
 		return nil
 	})
 	if err != nil {
-		return goModFiles, fmt.Errorf("error walking directories: %w", err)
+		return files, fmt.Errorf("error walking directories: %w", err)
 	}
 
-	return goModFiles, nil
+	return files, nil
 }
 
 // archivedPrinter encapsulates printing and counting archived repos.
@@ -49,6 +50,7 @@ func (ap *archivedPrinter) Print(goModPath, repo, pushedAt string, indirect bool
 	} else {
 		fmt.Printf("%s: https://github.com/%s (last push: %s)\n", goModPath, repo, pushedAt)
 	}
+
 	ap.mu.Lock()
 	ap.count++
 	ap.mu.Unlock()
@@ -57,12 +59,13 @@ func (ap *archivedPrinter) Print(goModPath, repo, pushedAt string, indirect bool
 func (ap *archivedPrinter) Count() int {
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
+
 	return int(ap.count)
 }
 
 // ListArchivedGoModules lists archived Go modules, optionally including indirect ones. Returns the count of archived repos found.
 func ListArchivedGoModules(ctx context.Context, checkIndirect bool) (int, error) {
-	goModFileNames, err := findGoModFiles()
+	goModFileNames, err := findFiles(ctx, "go.mod")
 	if err != nil {
 		return 0, fmt.Errorf("failed to find go.mod files: %w", err)
 	}
@@ -152,12 +155,15 @@ func ListArchivedGoModules(ctx context.Context, checkIndirect bool) (int, error)
 		// If checkIndirect is false and all infos are indirect, skip this repo entirely
 		if !checkIndirect {
 			onlyIndirect := true
+
 			for _, info := range infos {
 				if !info.indirect {
 					onlyIndirect = false
+
 					break
 				}
 			}
+
 			if onlyIndirect {
 				continue
 			}
@@ -176,6 +182,7 @@ func ListArchivedGoModules(ctx context.Context, checkIndirect bool) (int, error)
 						if !checkIndirect && info.indirect {
 							continue
 						}
+
 						ap.Print(info.goModPath, repo, result.PushedAt, info.indirect)
 					}
 				}
@@ -207,6 +214,7 @@ func ListArchivedGoModules(ctx context.Context, checkIndirect bool) (int, error)
 					if !checkIndirect && info.indirect {
 						continue
 					}
+
 					ap.Print(info.goModPath, repo, result.PushedAt, info.indirect)
 				}
 			}
