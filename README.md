@@ -2,6 +2,8 @@
 
 > ✨ A GitHub (gh) CLI extension to find archived dependencies.
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/wayneashleyberry/gh-arc.svg)](https://pkg.go.dev/github.com/wayneashleyberry/gh-arc)
+[![Go Report Card](https://goreportcard.com/badge/github.com/wayneashleyberry/gh-arc)](https://goreportcard.com/report/github.com/wayneashleyberry/gh-arc)
 [![lint](https://github.com/wayneashleyberry/gh-arc/actions/workflows/lint.yaml/badge.svg)](https://github.com/wayneashleyberry/gh-arc/actions/workflows/lint.yaml)
 [![run](https://github.com/wayneashleyberry/gh-arc/actions/workflows/run.yaml/badge.svg)](https://github.com/wayneashleyberry/gh-arc/actions/workflows/run.yaml)
 [![test](https://github.com/wayneashleyberry/gh-arc/actions/workflows/test.yaml/badge.svg)](https://github.com/wayneashleyberry/gh-arc/actions/workflows/test.yaml)
